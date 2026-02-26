@@ -15,13 +15,13 @@ def weighted_polyfit(y, sigma, T, degree):
     except Exception:
         return np.full(degree + 1, np.nan)
     
-def OD_fit(gas_list, ranges, degree, od_path, coeff_path):
+def OD_fit(gas_list, ranges, degree, od_path, coeff_path, low_res = 1e-2):
     for g_name in gas_list:
         logger.info(f'Gas: {g_name}')
         for i in range(len(ranges)-1):
             logger.info(f'Frequency window: {ranges[i]}-{ranges[i+1]}')
-            ds = xr.open_dataset(f'{od_path}{g_name}/od_{g_name}_freq{ranges[i]}_{ranges[i+1]}.nc')
-            T = ds.coords['DeltaT'].values
+            ds = xr.open_dataset(f'{od_path}{g_name}/od_{g_name}_freq{ranges[i]}_{ranges[i+1]}_{low_res:.0e}.nc')
+   #         T = ds.coords['DeltaT'].values
             ods = ds.od
 #            errors = ds.error
  #           errors = xr.where(errors < 1e-8, 1e-8, errors)
@@ -35,7 +35,7 @@ def OD_fit(gas_list, ranges, degree, od_path, coeff_path):
             ods = ods.where(valid_points >= degree + 1, drop=False)
             #where nan set to 690.7 to avoid issues in weighted fit
            
-            name_out = f'{coeff_path}{g_name}/coeff_{degree}_{g_name}_freq{ranges[i]}_{ranges[i+1]}.nc'
+            name_out = f'{coeff_path}{g_name}/coeff_{degree}_{g_name}_freq{ranges[i]}_{ranges[i+1]}_{low_res:.0e}.nc'
             pp = ods.polyfit(dim='DeltaT', deg=degree)
             coeffs = pp.polyfit_coefficients
             mask = coeffs.isnull().any("degree")   # where polyfit failed

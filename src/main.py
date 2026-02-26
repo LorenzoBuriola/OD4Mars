@@ -6,6 +6,7 @@ import json
 import logging
 import numpy as np
 import pandas as pd
+from pathlib import Path
 from datetime import datetime
 from src.logger_setup import setup_logger
 from src.generate_profiles import generate_profiles
@@ -17,37 +18,42 @@ from src.OD import OD_calc
 from src.OD_fit import OD_fit
 from src.input4pack import input4pack, run_packoneband
 
-def main():
-    print("Running the pipeline for Martian OD computation\n")
-    defaul_data_path = '/home/buriola/OD4Mars/NO_BACKUP/data/'
-
-    # Parse command line arguments
+def parse_args():
     parser = argparse.ArgumentParser(description="My pipeline")
     parser.add_argument(
         "-c", "--config",
         default="settings.json",
         help="Path to configuration file"
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set the logging level, default is INFO",
+    )
+    return parser.parse_args()
 
+def main(args):
     # --- Load config file ---
     config = load_config(args.config)
 
     # Setup logger
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    setup_logger(f'/home/buriola/OD4Mars/NO_BACKUP/log/OD4Mars_{timestamp}.log')
+    setup_logger(f'/home/buriola/OD4Mars/NO_BACKUP/log/OD4Mars_{timestamp}.log', getattr(logging, args.log_level.upper(), logging.INFO))
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
+
     logger.info(f"Using configuration file: {args.config}")
+    logger.info(f"Logging level set to: {args.log_level.upper()}")
 
     # important path
+    defaul_data_path = '/home/buriola/OD4Mars/NO_BACKUP/data/'
     data_path = f"{config.get('data_path', defaul_data_path)}"
     cfg_path = data_path + 'cfg/'
     lyr_path = data_path + 'lyr/'
     lyo_path = data_path + 'lyo/'
     od_path = data_path + 'od/'
     coeff_path = data_path + 'coeff/'
-    sforum_path = data_path + 'sforum/'
+    sMars_path = data_path + 's4Mars/'
 
     flag_profile = config.get('profiles_compute', True)
     flag_p_levels = config.get('pressure_levels_compute', True)
@@ -104,9 +110,9 @@ def main():
     flag_od = config.get('od_compute', True)
     flag_bin = config.get('od_bin', True)
     flag_fit = config.get('od_fit', True)
-    flag_sforum = config.get('for_sforum', True)
+    flag_sMars = config.get('for_sMars', True)
 
-    if (flag_od or flag_bin or flag_fit or flag_sforum):
+    if (flag_od or flag_bin or flag_fit or flag_sMars):
         gas_list = config.get('gas_list', ["CO2", "CO", "H2O", "O3", "HCl", "HDO"])
         ranges = np.arange(config.get('ranges', [90, 3010, 40])[0],
                             config.get('ranges', [90, 3010, 40])[1]+config.get('ranges', [90, 3010, 40])[2],
@@ -114,6 +120,10 @@ def main():
         temperatures = np.arange(config.get('temperatures', [-60, 60, 10])[0],
                             config.get('temperatures', [-60, 60, 10])[1]+config.get('temperatures', [-60, 60, 10])[2],
                             config.get('temperatures', [-60, 60, 10])[2])
+        ranges_bin = ranges = np.arange(config.get('od_bin_ranges', [90, 3010, 40])[0],
+                            config.get('od_bin_ranges', [90, 3010, 40])[1]+config.get('od_bin_ranges', [90, 3010, 40])[2],
+                            config.get('od_bin_ranges', [90, 3010, 40])[2])
+        low_res = config.get('od_low_res', 1e-2)
         degree = config.get('fit_degree', 3)
     
     if flag_od:
@@ -127,29 +137,32 @@ def main():
         logger.info("Step 5: generating Optical Depths")
         generate_OD(gas_list, ranges-0.005, temperatures, cfg_path, lyo_path, lyr_path)
     logger.info(f'OD at high resolution stored ar {lyo_path}')
+    logger.info(f'high resolution: 1e-4 cm-1, low resolution: {low_res:.0e} cm-1')
 
     if flag_bin:
         # Step 6: Binning OD
-        OD_calc(gas_list, ranges-0.005, temperatures, lyo_path, od_path)
+        OD_calc(gas_list, ranges_bin-0.005, temperatures, lyo_path, od_path, low_res)
     logger.info(f'OD stored at {od_path}')
-
 
     if flag_fit:
         logger.info('Step 6: fit OD')
-        OD_fit(gas_list, ranges, 
+        OD_fit(gas_list, ranges_bin, 
                degree,
-               od_path, coeff_path)
+               od_path, coeff_path, low_res)
     logger.info(f'Fit stored at {coeff_path}')
 
-    if flag_sforum:
-        logger.info('Step 7: prepare input for sFORUM')
+    if flag_sMars:
+        logger.info('Step 7: prepare input for s4Mars')
+        name_database = config.get('name_od_database', 'PSG')
+        outdir = Path(sMars_path+name_database+'/to_pack/')
+        outdir.mkdir(parents=True, exist_ok=True)
         input4pack(gas_list,
-                   ranges,
+                   ranges_bin,
                    degree,
                    coeff_path,
-                   sforum_path+'to_pack/')
+                   outdir, low_res)
         logger.info(f'run packoneband fortran executable')
-        run_packoneband('/home/buriola/OD4Mars/src/.', str(degree), outfile=config.get('pack_oneband_file', 'pack_oneband_output.txt'))
+        run_packoneband('/home/buriola/OD4Mars/src/.', name_database,str(degree), outfile=config.get('pack_oneband_file', 'pack_oneband_output.txt'))
 
     print('DONE!')
 
@@ -160,4 +173,5 @@ def load_config(path):
     return config
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    main(args)

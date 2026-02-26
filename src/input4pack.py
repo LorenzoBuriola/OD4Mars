@@ -5,22 +5,23 @@ import subprocess
 
 logger = logging.getLogger(__name__)
 
-def input4pack(gas_list, ranges, degree, coeff_path, out_path):
+def input4pack(gas_list, ranges, degree, coeff_path, out_path, low_res):
 
-    nn = int((ranges[-1]-ranges[0])/1e-2)
-    vv = np.arange(ranges[0], ranges[-1], 1e-2)
+    nn = int((ranges[-1]-ranges[0])/low_res)
 
     layers = 55
+    flag = False
 
     for ii,gas in enumerate(gas_list):
         logger.info(f'Processing {gas}')
         coeff_list =[]
         for rr in ranges[:-1]:
-            coeff = xr.open_dataset(f'{coeff_path}{gas}/coeff_{degree}_{gas}_freq{rr}_{int(rr+40)}.nc')
+            coeff = xr.open_dataset(f'{coeff_path}{gas}/coeff_{degree}_{gas}_freq{rr}_{int(rr+40)}_{low_res:.0e}.nc')
             coeff_list.append(coeff)
         coeff_all = xr.concat(coeff_list, dim='freq')
         coeff_all = coeff_all.sortby('freq')
         coeff_all = coeff_all.transpose('freq', 'altitude', 'degree')
+        vv = coeff_all.freq.values
         nquad = coeff_all.mask0.sum(dim = 'freq').values
 
         ind = []
@@ -31,7 +32,7 @@ def input4pack(gas_list, ranges, degree, coeff_path, out_path):
 
         for jj in range(layers):
             namefile = f'c{ii+1:02d}{jj+1:03d}'
-            with open(f'{out_path}{namefile}', 'wb') as fid1:
+            with open(out_path / namefile, 'wb') as fid1:
                 fid1.write(np.array(nn, dtype=np.int32).tobytes())
                 fid1.write(np.array(nquad[jj], dtype=np.int32).tobytes())
                 fid1.write(np.array(ind[jj]+1, dtype=np.int32).tobytes()) # Fortran indexing
@@ -39,8 +40,8 @@ def input4pack(gas_list, ranges, degree, coeff_path, out_path):
                 for kk in reversed(range(degree+1)):
                     fid1.write(np.array(cind[ind[jj],jj,kk], dtype=np.float32).tobytes())
 
-def run_packoneband(exe_path, degree, outfile):
-    cmd = ['./pack_oneband.out', str(degree)]
+def run_packoneband(exe_path, name_database, degree, outfile):
+    cmd = ['./pack_oneband.out', name_database, str(degree)]
     with open(outfile, 'w') as f:
         result = subprocess.run(cmd, 
                                 cwd=exe_path,
