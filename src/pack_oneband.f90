@@ -9,6 +9,7 @@ program pack
     character(len=5) speciesname(nspecies)
     character(len=2) specienumber,igstr,degstr
     character(len=2) layernum(nlayermax)
+    character(len=10) name_database
     data speciesname/'CO2 ','CO  ' ,'H2O ', 'O3  ', 'HCl ', 'HDO '/
     integer ncharspecies(nspecies)
     data ncharspecies/3,2,3,2,3,3/
@@ -18,7 +19,8 @@ program pack
     real, allocatable :: cq(:,:)
     real cc,vind
 
-    call get_command_argument(1, degstr)
+    call get_command_argument(1, name_database)
+    call get_command_argument(2, degstr)
     read(degstr,*) degree
     equad=0
     squad=0
@@ -31,7 +33,8 @@ program pack
         write(*,'(A,I2)') 'reading layer   ', layer
         do is=1,nspecies
             write(specienumber,'(I0.2)') is
-            fin(is)='/home/buriola/OD4Mars/NO_BACKUP/data/sforum/to_pack/c'//specienumber(1:2)//'0'//layernum(layer)
+            fin(is)='/home/buriola/OD4Mars/NO_BACKUP/data/s4Mars/' &
+                &   //trim(name_database)//'/to_pack/c'//specienumber(1:2)//'0'//layernum(layer)
             squad(is,layer)=nnquad+1
             open(90,file=fin(is),form='unformatted',access='stream',status='old')
             read(90) npn(layer)
@@ -61,19 +64,22 @@ program pack
         enddo          !OVER SPECIES
     enddo              !OVER LAYERS
 
-    open(7,file='/home/buriola/OD4Mars/NO_BACKUP/data/sforum/hc',status='unknown')
+    open(7,file='/home/buriola/OD4Mars/NO_BACKUP/data/s4Mars/'&
+        &   //trim(name_database)//'/hc',status='unknown')
     write(7,'(I10)') nnquad
     do layer=1,nlayermax
         write(7,'(I6, (12I9))') npn(layer),(squad(is,layer),equad(is,layer),is=1,nspecies)
     enddo
     close(7)
     if(nnquad.gt.0) then
-        open(2,file='/home/buriola/OD4Mars/NO_BACKUP/data/sforum/quad',form='unformatted',status='old')
+        open(2,file='/home/buriola/OD4Mars/NO_BACKUP/data/s4Mars/'&
+            &   //trim(name_database)//'/quad',form='unformatted',status='unknown')
         write(2) (quad(iw),iw=1,nnquad)
         close(2)
         do ig=1,degree+1
             write(igstr,'(I0)')ig-1
-            open(2,file='/home/buriola/OD4Mars/NO_BACKUP/data/sforum/cq'//trim(igstr),form='unformatted',status='old')
+            open(2,file='/home/buriola/OD4Mars/NO_BACKUP/data/s4Mars/'&
+                &//trim(name_database)//'/cq'//trim(igstr),form='unformatted',status='unknown')
             write(2) (cq(iw,ig),iw=1,nnquad)
             close(2)
         enddo
