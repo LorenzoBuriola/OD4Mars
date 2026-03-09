@@ -36,9 +36,9 @@ def input4pack(gas_list, ranges, degree, coeff_path, out_path, low_res):
                 fid1.write(np.array(nn, dtype=np.int32).tobytes())
                 fid1.write(np.array(nquad[jj], dtype=np.int32).tobytes())
                 fid1.write(np.array(ind[jj]+1, dtype=np.int32).tobytes()) # Fortran indexing
-                fid1.write(np.array(vv[ind[jj]], dtype=np.float32).tobytes())
+                fid1.write(np.array(vv[ind[jj]], dtype=np.float64).tobytes())
                 for kk in reversed(range(degree+1)):
-                    fid1.write(np.array(cind[ind[jj],jj,kk], dtype=np.float32).tobytes())
+                    fid1.write(np.array(cind[ind[jj],jj,kk], dtype=np.float64).tobytes())
 
 def run_packoneband(exe_path, name_database, degree, outfile):
     cmd = ['./pack_oneband.out', name_database, str(degree)]

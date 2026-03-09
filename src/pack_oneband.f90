@@ -1,4 +1,5 @@
 program pack
+    use iso_fortran_env, only: real64
     implicit none
     integer, parameter :: nlayermax=55
     integer, parameter :: nspecies=6
@@ -16,8 +17,8 @@ program pack
     integer equad(nspecies,nlayermax),squad(nspecies,nlayermax)
     integer quad(nnmax)
     integer iw,is,ig,layer,ind,nquad,nnquad
-    real, allocatable :: cq(:,:)
-    real cc,vind
+    real(real64), allocatable :: cq(:,:)
+    real(real64) cc,vind
 
     call get_command_argument(1, name_database)
     call get_command_argument(2, degstr)
