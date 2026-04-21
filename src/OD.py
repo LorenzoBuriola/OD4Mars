@@ -6,7 +6,7 @@ from scipy.stats import binned_statistic
 
 logger = logging.getLogger(__name__)
 
-def OD_calc(gas_list, ranges, temperatures, lyo_path, od_path, low_res = 1e-2):
+def OD_calc(gas_list, ranges, temperatures, lyo_path, od_path, low_res):
     tab = read_out(f'{lyo_path}CO2/lyo_CO2_0_freq90_130.txt')
     hh = tab.columns[1:-1].to_numpy(dtype='float64')
     for g_name in gas_list:

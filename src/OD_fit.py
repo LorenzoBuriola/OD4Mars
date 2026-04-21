@@ -5,7 +5,7 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 def weighted_polyfit(y, sigma, T, degree):
-    """Fit a weighted polynomial of given degree to data y(T) with error sigma."""
+    #Fit a weighted polynomial of given degree to data y(T) with error sigma.
     if np.any(~np.isfinite(y)) or np.any(~np.isfinite(sigma)):
         return np.full(degree + 1, np.nan)
     try:
@@ -15,12 +15,12 @@ def weighted_polyfit(y, sigma, T, degree):
     except Exception:
         return np.full(degree + 1, np.nan)
     
-def OD_fit(gas_list, ranges, degree, od_path, coeff_path, low_res = 1e-2):
+def OD_fit(gas_list, ranges, degree, od_path, coeff_path, low_res):
     for g_name in gas_list:
         logger.info(f'Gas: {g_name}')
         for i in range(len(ranges)-1):
             logger.info(f'Frequency window: {ranges[i]}-{ranges[i+1]}')
-            ds = xr.open_dataset(f'{od_path}{g_name}/od_{g_name}_freq{ranges[i]}_{ranges[i+1]}_{low_res:.0e}.nc')
+            ds = xr.open_dataset(f'{od_path}{g_name}/od_{g_name}_freq{ranges[i]}_{ranges[i+1]}_{low_res:.0e}.nc', engine='netcdf4')
    #         T = ds.coords['DeltaT'].values
             ods = ds.od
 #            errors = ds.error
@@ -35,7 +35,6 @@ def OD_fit(gas_list, ranges, degree, od_path, coeff_path, low_res = 1e-2):
             ods = ods.where(valid_points >= degree + 1, drop=False)
             #where nan set to 690.7 to avoid issues in weighted fit
            
-            name_out = f'{coeff_path}{g_name}/coeff_{degree}_{g_name}_freq{ranges[i]}_{ranges[i+1]}_{low_res:.0e}.nc'
             pp = ods.polyfit(dim='DeltaT', deg=degree)
             coeffs = pp.polyfit_coefficients
             mask = coeffs.isnull().any("degree")   # where polyfit failed
@@ -47,7 +46,6 @@ def OD_fit(gas_list, ranges, degree, od_path, coeff_path, low_res = 1e-2):
                     coords={"degree": coeffs["degree"]},
                 ).broadcast_like(coeffs)
             coeffs = xr.where(mask, custom_da, coeffs)
-                
 
             fitted = xr.polyval(ds.DeltaT, coeffs)
             ss_res = ((ods - fitted) ** 2).sum(dim='DeltaT')
@@ -55,7 +53,7 @@ def OD_fit(gas_list, ranges, degree, od_path, coeff_path, low_res = 1e-2):
             r_squared = 1 - ss_res / ss_tot
 
             dof = valid_points - (degree + 1)
-            adjused_r_squared = 1 - (1 - r_squared) * (valid_points - 1) / dof
+            adjusted_r_squared = 1 - (1 - r_squared) * (valid_points - 1) / dof
 #            neg_mask = (fitted < 0).any(dim="DeltaT")
 #            count_negative_points = neg_mask.sum()
 #           tot = neg_mask.size
@@ -67,8 +65,9 @@ def OD_fit(gas_list, ranges, degree, od_path, coeff_path, low_res = 1e-2):
             ds = xr.Dataset({
                 'coeff': coeffs,
                 'mask0': mask0,
-                'adj_r_squared': adjused_r_squared,
+                'adj_r_squared': adjusted_r_squared,
             })
+            name_out = f'{coeff_path}{g_name}/coeff_{degree}_{g_name}_freq{ranges[i]}_{ranges[i+1]}_{low_res:.0e}.nc'
             ds.to_netcdf(name_out)
 
     logger.info('Done')

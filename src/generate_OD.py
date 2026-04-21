@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 def T_shift(DT, cfg_df):
     cfg_out = cfg_df.copy()
     df = cfg.read_atm_layers(cfg_df)
-    df.Temperature = (df.Temperature+DT).round(1)
+    df['Temperature'] = (df['Temperature']+DT).round(1)
     cfg.write_atm_layers(df,cfg_out)
     cfg_out['SURFACE-TEMPERATURE'] = float(cfg_df['SURFACE-TEMPERATURE']) + DT
     return cfg_out
@@ -45,4 +45,4 @@ def generate_OD(gas_list, ranges, temperatures, cfg_path, lyo_path, lyr_path):
                             wephm='y',
                             out_file=f"{lyr_path}{g_name}/lyr_{g_name}_{DT}_freq{ranges[i]:.0f}_{ranges[i+1]:.0f}.txt",
                             verbose=False)
-    logger.info("\nThat's all!")
+    logger.info("OD generation completed")

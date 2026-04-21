@@ -1,22 +1,22 @@
 program pack
-    use iso_fortran_env, only: real64
+    use iso_fortran_env, only: real64,int32
     implicit none
-    integer, parameter :: nlayermax=55
-    integer, parameter :: nspecies=6
-    integer, parameter :: nnmax=100000000
-    integer degree
-    integer npn(nlayermax)
+    integer(int32), parameter :: nlayermax=55
+    integer(int32), parameter :: nspecies=6
+    integer(int32), parameter :: nnmax=100000000
+    integer(int32) degree
+    integer(int32) npn(nlayermax)
     character(len=100) fin(nspecies)
     character(len=5) speciesname(nspecies)
     character(len=2) specienumber,igstr,degstr
     character(len=2) layernum(nlayermax)
     character(len=10) name_database
     data speciesname/'CO2 ','CO  ' ,'H2O ', 'O3  ', 'HCl ', 'HDO '/
-    integer ncharspecies(nspecies)
+    integer(int32) ncharspecies(nspecies)
     data ncharspecies/3,2,3,2,3,3/
-    integer equad(nspecies,nlayermax),squad(nspecies,nlayermax)
-    integer quad(nnmax)
-    integer iw,is,ig,layer,ind,nquad,nnquad
+    integer(int32) equad(nspecies,nlayermax),squad(nspecies,nlayermax)
+    integer(int32) quad(nnmax)
+    integer(int32) iw,is,ig,layer,ind,nquad,nnquad
     real(real64), allocatable :: cq(:,:)
     real(real64) cc,vind
 
@@ -78,7 +78,7 @@ program pack
         write(2) (quad(iw),iw=1,nnquad)
         close(2)
         do ig=1,degree+1
-            write(igstr,'(I0)')ig-1
+            write(igstr,'(I0)') ig-1
             open(2,file='/home/buriola/OD4Mars/NO_BACKUP/data/s4Mars/'&
                 &//trim(name_database)//'/cq'//trim(igstr),form='unformatted',status='unknown')
             write(2) (cq(iw,ig),iw=1,nnquad)
