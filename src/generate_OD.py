@@ -36,12 +36,12 @@ def generate_OD(gas_list, ranges, temperatures, cfg_path, lyo_path, lyr_path):
                 temp['GENERATOR-RANGE2'] = "{:.4f}".format(ranges[i+1])
                 cfg.dict_to_cfg(temp, f'{cfg_path}OD_gen/cfg_temp.txt')
                 run_psg(cfg_file=f'{cfg_path}OD_gen/cfg_temp.txt',
-                            type='lyo',
+                            kind='lyo',
                             wephm='y',
                             out_file=f"{lyo_path}{g_name}/lyo_{g_name}_{DT}_freq{ranges[i]:.0f}_{ranges[i+1]:.0f}.txt",
                             verbose=False)
                 run_psg(cfg_file=f'{cfg_path}OD_gen/cfg_temp.txt',
-                            type='lyr',
+                            kind='lyr',
                             wephm='y',
                             out_file=f"{lyr_path}{g_name}/lyr_{g_name}_{DT}_freq{ranges[i]:.0f}_{ranges[i+1]:.0f}.txt",
                             verbose=False)

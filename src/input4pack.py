@@ -57,14 +57,17 @@ def input4pack(gas_list, ranges, degree, coeff_path, out_path, low_res):
 
 def run_packoneband(exe_path, name_database, degree, outfile):
     cmd = ['./pack_oneband.out', name_database, str(degree)]
-    with open(outfile, 'w') as f:
-        result = subprocess.run(cmd, 
-                                cwd=exe_path,
-                                stdout=f,
-                                stderr=subprocess.PIPE,
-                                text=True
-                            )
-    if result.returncode != 0:
-        logger.error(f'Error running packoneband: {result.stderr}')
-    else:
-        logger.info(f'packoneband finished successfully. Output in {outfile}')
+    try:
+        with open(outfile, 'w') as f:
+            result = subprocess.run(cmd, 
+                                    cwd=exe_path,
+                                    stdout=f,
+                                    stderr=subprocess.PIPE,
+                                    text=True
+                                )
+        if result.returncode != 0:
+            logger.error(f'Error running packoneband: {result.stderr}')
+        else:
+            logger.info(f'packoneband finished successfully. Output in {outfile}')
+    except Exception:
+        logger.exception("Failed to execute ./packoneband.out")

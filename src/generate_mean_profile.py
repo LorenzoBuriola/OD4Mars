@@ -135,7 +135,7 @@ def write_mean_cfg(df_prof, ofile) -> None:
     cfg_df['SURFACE-NSURF'] = '0'
     cfg_df['SURFACE-SURF'] = 'MARS'
     cfg_df['SURFACE-TYPE'] = 'ALBEDO_GSFC'
-    cfg_df['SURFACE-ABUN'] = '100'
+    cfg_df['SURFACE-ABUN'] = '0'
     cfg_df['SURFACE-UNIT'] = 'pct'
     cfg_df['SURFACE-THICK'] = '1'
     cfg_df['SURFACE-MIXING'] = 'Normalized'

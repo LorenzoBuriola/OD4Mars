@@ -25,7 +25,7 @@ def OD_fit(gas_list, ranges, degree, od_path, coeff_path, low_res):
             ods = ds.od
 #            errors = ds.error
  #           errors = xr.where(errors < 1e-8, 1e-8, errors)
-            mask0 = ods.max(dim='DeltaT') > 1e-8
+            mask0 = ods.min(dim='DeltaT') > 1e-8
             ods = xr.where(mask0, ods, 0.)
             maskMAX = ods <= 690.7
             

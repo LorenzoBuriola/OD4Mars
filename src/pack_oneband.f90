@@ -6,11 +6,11 @@ program pack
     integer(int32), parameter :: nnmax=100000000
     integer(int32) degree
     integer(int32) npn(nlayermax)
-    character(len=100) fin(nspecies)
+    character(len=150) fin(nspecies)
     character(len=5) speciesname(nspecies)
     character(len=2) specienumber,igstr,degstr
     character(len=2) layernum(nlayermax)
-    character(len=10) name_database
+    character(len=20) name_database
     data speciesname/'CO2 ','CO  ' ,'H2O ', 'O3  ', 'HCl ', 'HDO '/
     integer(int32) ncharspecies(nspecies)
     data ncharspecies/3,2,3,2,3,3/

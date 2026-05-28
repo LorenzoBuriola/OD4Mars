@@ -57,7 +57,7 @@ def OD_calc(gas_list, ranges, temperatures, lyo_path, od_path, low_res):
                 'mask': mm
             })
             path = f'{od_path}{g_name}/od_{g_name}_freq{ranges[i]+0.005:.0f}_{ranges[i+1]+0.005:.0f}_{low_res:.0e}.nc'
-            ds.to_netcdf(path, engine='netcdf4')
+            ds.to_netcdf(path, engine='netcdf4', mode = 'w')
 
     logger.info('All done!')
  

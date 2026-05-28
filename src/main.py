@@ -4,6 +4,7 @@
 import argparse
 import json
 import logging
+import sys
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -42,6 +43,18 @@ def main(args):
     setup_logger(f'/home/buriola/OD4Mars/NO_BACKUP/log/OD4Mars_{timestamp}.log', getattr(logging, args.log_level.upper(), logging.INFO))
     logger = logging.getLogger(__name__)
 
+    def handle_exception(exc_type, exc_value, exc_traceback):
+        if issubclass(exc_type, KeyboardInterrupt):
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+            return
+
+        logger.critical(
+            "UNCAUGHT EXCEPTION",
+            exc_info=(exc_type, exc_value, exc_traceback)
+        )
+    sys.excepthook = handle_exception
+
+    logger.info("OD4Mars program started")
     logger.info(f"Using configuration file: {args.config}")
     logger.info(f"Logging level set to: {args.log_level.upper()}")
 
@@ -78,33 +91,33 @@ def main(args):
 
     # Step 1: Generate profiles
     if flag_profile:
-        logger.info("Step 1: generating profiles")
+        logger.info("Generating profiles")
         generate_profiles(opath = f'{cfg_path}profiles/', dates = dates,
                           latitudes = latitudes,
                           longitudes = longitudes)
     else:
-        logger.info("Step 1: skipping profile generation")
+        logger.info("Skipping profile generation")
     logger.info(f"Profiles at '{cfg_path}profiles/'")
 
     # Step 2: Compute pressure levels
     if flag_p_levels:
-        logger.info("Step 2: computing pressure levels")
+        logger.info("Computing pressure levels")
         generate_p_levels(latitudes, longitudes, dates, f'{cfg_path}profiles/',
                           ofile = p_filename)
     else:
-        logger.info("Step 2: skipping pressure level computation")
+        logger.info("Skipping pressure level computation")
     logger.info(f"Pressure levels saved at '{config.get('pressure_levels_file', 'p_edges.npy')}'")
 
     # Step 3: Compute mean profile
     if flag_mean_profile:
         mean_file = f'{cfg_path}{config.get('mean_profile_cfg_file', 'mean_profile.txt')}'
         flag_altitude = config.get('mean_profile_compute_altitude', True)
-        logger.info("Step 3: computing mean profile")
+        logger.info("Computing mean profile")
         generate_mean_profiles(latitudes, longitudes, dates, f'{cfg_path}profiles/', p_filename,
                                            csv_ofile = config.get('mean_profile_file', 'mean_profile.csv'),
                                            cfg_ofile = mean_file, comp_alt = flag_altitude)
     else:
-        logger.info("Step 3: skipping mean profile computation")
+        logger.info("Skipping mean profile computation")
     logger.info(f"Mean profile saved at '{cfg_path}{config.get('mean_profile_cfg_file', 'mean_profile.txt')}'")
 
     flag_od = config.get('od_compute', True)
@@ -123,20 +136,22 @@ def main(args):
         ranges_bin = ranges = np.arange(config.get('od_bin_ranges', [90, 3010, 40])[0],
                             config.get('od_bin_ranges', [90, 3010, 40])[1]+config.get('od_bin_ranges', [90, 3010, 40])[2],
                             config.get('od_bin_ranges', [90, 3010, 40])[2])
-        low_res = config.get('od_low_res', 1e-2)
         degree = config.get('fit_degree', 3)
     
     if flag_od:
         # Step 4: Generate cfg file for each species
-        logger.info("Step 4: generating cfg files for OD computation")
+        logger.info("Generating cfg files for OD computation")
         
         generate_OD_cfg(gas_list, cfg_path+'mean_profile.txt', f'{cfg_path}OD_gen/')
         logger.info(f"OD cfg files saved at '{cfg_path}OD_gen/'")
 
         # Step 5: Generate OD
-        logger.info("Step 5: generating Optical Depths")
+        logger.info("Generating Optical Depths")
         generate_OD(gas_list, ranges-0.005, temperatures, cfg_path, lyo_path, lyr_path)
+    else:
+        logger.info("Skipping Optical Depth Generation")
     logger.info(f'OD at high resolution stored ar {lyo_path}')
+    low_res = config.get('od_low_res', 1e-2)
     logger.info(f'high resolution: 1e-4 cm-1, low resolution: {low_res:.0e} cm-1')
 
     if flag_bin:
@@ -145,14 +160,18 @@ def main(args):
     logger.info(f'OD stored at {od_path}')
 
     if flag_fit:
-        logger.info('Step 6: fit OD')
+        logger.info('Fitting OD')
+        logger.info(f'Fitting with degree {degree} and low resolution {low_res:.0e} cm-1')
         OD_fit(gas_list, ranges_bin, 
                degree,
                od_path, coeff_path, low_res)
+    else:
+        logger.info('Skipping OD fitting')
     logger.info(f'Fit stored at {coeff_path}')
 
     if flag_sMars:
-        logger.info('Step 7: prepare input for s4Mars')
+        logger.info('Preparing input for s4Mars')
+        logger.info(f'Using fit with degree {degree} and low resolution {low_res:.0e} cm-1')
         name_database = config.get('name_od_database', 'PSG')
         outdir = Path(sMars_path+name_database+'/to_pack/')
         outdir.mkdir(parents=True, exist_ok=True)
@@ -163,8 +182,10 @@ def main(args):
                    outdir, low_res)
         logger.info(f'run packoneband fortran executable')
         run_packoneband('/home/buriola/OD4Mars/src/.', name_database,str(degree), outfile=config.get('pack_oneband_file', 'pack_oneband_output.txt'))
+    else:
+        logger.info("Skipping input for s4Mars preparation")
 
-    print('DONE!')
+    logger.info('Program OD4Mars executed!')
 
 def load_config(path):
     """Load configuration settings from a JSON file."""
