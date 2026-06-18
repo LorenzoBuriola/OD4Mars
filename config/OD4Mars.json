@@ -1,6 +1,5 @@
 {
     "data_path" : "/home/buriola/OD4Mars/NO_BACKUP/data/",
-    "log_file" : "/home/buriola/OD4Mars/NO_BACKUP/log/OD4Mars.log",
 
     "profiles_compute" : false,
     "profile_dates" : ["2019-03-23", "2021-02-07", 24],
@@ -8,20 +7,28 @@
     "profile_longitudes" : [0, 360],
 
     "pressure_levels_compute" : false,
-    "pressure_levels_file" : "p_edges.npy",
+    "pressure_levels_file" : "/home/buriola/OD4Mars/output/p_edges.npy",
 
     "mean_profile_compute" : false,
-    "mean_profile_file" : "mean_profile.csv",
+    "mean_profile_compute_altitude": true,
+    "mean_profile_file" : "/home/buriola/OD4Mars/output/mean_profile.csv",
     "mean_profile_cfg_file" : "mean_profile.txt",
 
     "od_compute": false,
     "gas_list" : ["CO2", "CO", "H2O", "O3", "HCl", "HDO"],
     "ranges" : [90, 3010, 40],
-    "temperatures" : [-60, 60, 10],
+    "temperatures" : [-60,60,10],
 
     "od_bin" : true,
+    "od_bin_cumulative" : "bottom",
+    "od_bin_ranges" : [90, 3010, 40],
+    "od_low_res" : 1e-2,
 
     "od_fit" : true,
     "fit_degree" : 3,
-    "fit_with_errors" : false
+    "fit_with_errors" : false,
+
+    "for_sMars" : true,
+    "name_od_database" : "PSG",
+    "pack_oneband_file" : "/home/buriola/OD4Mars/output/pack_oneband_out.txt" 
 }   
