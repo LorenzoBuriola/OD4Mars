@@ -16,15 +16,12 @@ def T_shift(DT, cfg_df):
 
 def generate_OD(gas_list, ranges, temperatures, cfg_path, lyo_path, lyr_path):
 
-    ranges = np.arange(89.995, 3049.995, 40)
-    DTs = np.arange(-60, 70, 10)
-
     logger.info('Starting computing ODs\n')
 
     for g_name in gas_list:
         logger.info(f'Gas: {g_name}')
         cfg_dict = cfg.read_cfg(f'{cfg_path}OD_gen/cfg_{g_name}.txt')
-        for DT in DTs:
+        for DT in temperatures:
             logger.info(f'Temperature shift: {DT}')
             temp = T_shift(DT, cfg_dict)
             for i in range(len(ranges)-1):

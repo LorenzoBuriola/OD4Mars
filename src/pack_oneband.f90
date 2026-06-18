@@ -10,7 +10,7 @@ program pack
     character(len=5) speciesname(nspecies)
     character(len=2) specienumber,igstr,degstr
     character(len=2) layernum(nlayermax)
-    character(len=20) name_database
+    character(len=20) name_database, cum
     data speciesname/'CO2 ','CO  ' ,'H2O ', 'O3  ', 'HCl ', 'HDO '/
     integer(int32) ncharspecies(nspecies)
     data ncharspecies/3,2,3,2,3,3/
@@ -19,9 +19,12 @@ program pack
     integer(int32) iw,is,ig,layer,ind,nquad,nnquad
     real(real64), allocatable :: cq(:,:)
     real(real64) cc,vind
+    character(len=6), allocatable :: filenames(:)
+    integer(int32) nfiles
 
     call get_command_argument(1, name_database)
     call get_command_argument(2, degstr)
+    call get_command_argument(3, cum)
     read(degstr,*) degree
     equad=0
     squad=0
@@ -65,8 +68,26 @@ program pack
         enddo          !OVER SPECIES
     enddo              !OVER LAYERS
 
+    nfiles = 2 + degree+1
+    allocate(filenames(nfiles))
+    if (cum=='bottom') then
+        filenames(1) = 'hcR'
+        filenames(2) = 'quadR'
+        do ig=1,degree+1
+            write(igstr,'(I0)') ig-1
+            filenames(2+ig) = 'cq'//trim(igstr)//'R'
+        enddo
+    else
+        filenames(1) = 'hc'
+        filenames(2) = 'quad'
+        do ig=1,degree+1
+            write(igstr,'(I0)') ig-1
+            filenames(2+ig) = 'cq'//trim(igstr)
+        enddo
+    end if
+
     open(7,file='/home/buriola/OD4Mars/NO_BACKUP/data/s4Mars/'&
-        &   //trim(name_database)//'/hc',status='unknown')
+        &   //trim(name_database)//trim(filenames(1)),status='unknown')
     write(7,'(I10)') nnquad
     do layer=1,nlayermax
         write(7,'(I6, (12I9))') npn(layer),(squad(is,layer),equad(is,layer),is=1,nspecies)
@@ -74,13 +95,13 @@ program pack
     close(7)
     if(nnquad.gt.0) then
         open(2,file='/home/buriola/OD4Mars/NO_BACKUP/data/s4Mars/'&
-            &   //trim(name_database)//'/quad',form='unformatted',status='unknown')
+            &   //trim(name_database)//trim(filenames(2)),form='unformatted',status='unknown')
         write(2) (quad(iw),iw=1,nnquad)
         close(2)
         do ig=1,degree+1
             write(igstr,'(I0)') ig-1
             open(2,file='/home/buriola/OD4Mars/NO_BACKUP/data/s4Mars/'&
-                &//trim(name_database)//'/cq'//trim(igstr),form='unformatted',status='unknown')
+                &//trim(name_database)//trim(filenames(ig+2)),form='unformatted',status='unknown')
             write(2) (cq(iw,ig),iw=1,nnquad)
             close(2)
         enddo

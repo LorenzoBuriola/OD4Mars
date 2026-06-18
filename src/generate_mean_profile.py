@@ -9,7 +9,7 @@ from PSGpy.utils import name_file
 
 logger = logging.getLogger(__name__)
 
-def generate_mean_profiles(latitudes, longitudes, dates, ipath, p_filename, csv_ofile, cfg_ofile, comp_alt):
+def generate_mean_profiles(latitudes, longitudes, dates, ipath, p_filename, csv_ofile):
     dates_list = dates.strftime('%Y/%m/%d %H:%M').to_list()
     tt = []
     h2o = []
@@ -65,22 +65,6 @@ def generate_mean_profiles(latitudes, longitudes, dates, ipath, p_filename, csv_
     })
     df_mean['HCl'] = 1e-9
 
-    if comp_alt:
-        #Altitude
-        logger.info('Computing altitude profile from pressure edges and mean temperature...')
-        W_air = 43.61   #Weight [g/mol]
-        R = 8314.4598  #Universal gas constant [mJ/(mol*K)]
-        g_surf = 3.73     #Gravity [m/s^2]
-        R_surf = 6779.8/2*1000  #Mars radius [m]
-        hh = np.zeros_like(p_edges)
-        logger.debug(f'Altitude at level 1: {hh[0]/1000} km')
-        for i in range(len(p_edges)-1):
-            g = g_surf*((hh[i]+R_surf)/ R_surf)**2
-            H = R * (meanT[i]+meanT[i+1])/2 / (W_air * g)  #Scale height [m]
-            hh[i+1] = hh[i] + H * np.log(p_edges[i] / p_edges[i+1])  #Altitude [m]
-            logger.debug(f'Altitude at level {i+2}: {hh[i+1]/1000} km')
-        df_mean.insert(2, 'Altitude', hh / 1000)
-
     df_std = pd.DataFrame({
         'Pressure' : p_edges,
         'Temperature' : stdT,
@@ -94,9 +78,24 @@ def generate_mean_profiles(latitudes, longitudes, dates, ipath, p_filename, csv_
     combined_df = pd.concat({'Mean': df_mean, 'StdError': df_std},axis=1)
     # Save to CSV
     combined_df.to_csv(csv_ofile, index=False, float_format='%.4e')
+    return df_mean
 
-    write_mean_cfg(df_mean, cfg_ofile)
-
+def add_altitude(df):
+    logger.info('Computing altitude profile from pressure edges and mean temperature...')
+    p_edges = df['Pressure']
+    meanT = df['Temperature']
+    W_air = 43.61   #Weight [g/mol]
+    R = 8314.4598  #Universal gas constant [mJ/(mol*K)]
+    g_surf = 3.73     #Gravity [m/s^2]
+    R_surf = 6779.8/2*1000  #Mars radius [m]
+    hh = np.zeros_like(p_edges)
+    logger.debug(f'Altitude at level 1: {hh[0]/1000} km')
+    for i in range(len(p_edges)-1):
+        g = g_surf*((hh[i]+R_surf)/ R_surf)**2
+        H = R * (meanT[i]+meanT[i+1])/2 / (W_air * g)  #Scale height [m]
+        hh[i+1] = hh[i] + H * np.log(p_edges[i] / p_edges[i+1])  #Altitude [m]
+        logger.debug(f'Altitude at level {i+2}: {hh[i+1]/1000} km')
+    df.insert(2, 'Altitude', hh / 1000)
 
 def write_mean_cfg(df_prof, ofile) -> None:
     if isinstance(df_prof, str):
@@ -109,8 +108,8 @@ def write_mean_cfg(df_prof, ofile) -> None:
     cfg_df['OBJECT-DATE'] = '2019/03/24 00:00'
     cfg_df['OBJECT-OBS-LATITUDE'] = '0.0'
     cfg_df['OBJECT-OBS-LONGITUDE'] = '90.0'
-    cfg_df['OBJECT-GRAVITY'] = '3.73'
-    cfg_df['OBJECT-GRAVITY-UNIT'] = 'g'
+    cfg_df['OBJECT-GRAVITY'] = '3.933'
+    cfg_df['OBJECT-GRAVITY-UNIT'] = 'rho'
     cfg_df['OBJECT-DIAMETER'] = '6779.80'
     cfg_df['GEOMETRY-REF'] = 'User'
     cfg_df['GEOMETRY'] = 'Nadir'
@@ -119,7 +118,7 @@ def write_mean_cfg(df_prof, ofile) -> None:
     cfg_df['GEOMETRY-ALTITUDE-UNIT'] = 'km'
     cfg_df['GENERATOR-INSTRUMENT'] = 'user'
     cfg_df['GENERATOR-GAS-MODEL'] = 'Y'
-    cfg_df['GENERATOR-CONT-MODEL'] = 'Y'
+    cfg_df['GENERATOR-CONT-MODEL'] = 'N'
     cfg_df['GENERATOR-CONT-STELLAR'] = 'N'
     cfg_df['GENERATOR-RANGEUNIT'] = 'cm'
     cfg_df['GENERATOR-RESOLUTIONUNIT'] = 'cm'

@@ -15,17 +15,17 @@ def weighted_polyfit(y, sigma, T, degree):
     except Exception:
         return np.full(degree + 1, np.nan)
     
-def OD_fit(gas_list, ranges, degree, od_path, coeff_path, low_res):
+def OD_fit(gas_list, ranges, degree, od_path, coeff_path, low_res, cumulative='layer'):
     for g_name in gas_list:
         logger.info(f'Gas: {g_name}')
         for i in range(len(ranges)-1):
             logger.info(f'Frequency window: {ranges[i]}-{ranges[i+1]}')
-            ds = xr.open_dataset(f'{od_path}{g_name}/od_{g_name}_freq{ranges[i]}_{ranges[i+1]}_{low_res:.0e}.nc', engine='netcdf4')
+            ds = xr.open_dataset(f'{od_path}{g_name}/od_{g_name}_freq{ranges[i]}_{ranges[i+1]}_{low_res:.0e}_{cumulative}.nc', engine='netcdf4')
    #         T = ds.coords['DeltaT'].values
             ods = ds.od
 #            errors = ds.error
  #           errors = xr.where(errors < 1e-8, 1e-8, errors)
-            mask0 = ods.min(dim='DeltaT') > 1e-8
+            mask0 = ods.max(dim='DeltaT') > 1e-8
             ods = xr.where(mask0, ods, 0.)
             maskMAX = ods <= 690.7
             
@@ -67,8 +67,8 @@ def OD_fit(gas_list, ranges, degree, od_path, coeff_path, low_res):
                 'mask0': mask0,
                 'adj_r_squared': adjusted_r_squared,
             })
-            name_out = f'{coeff_path}{g_name}/coeff_{degree}_{g_name}_freq{ranges[i]}_{ranges[i+1]}_{low_res:.0e}.nc'
-            ds.to_netcdf(name_out)
+            name_out = f'{coeff_path}{g_name}/coeff_{degree}_{g_name}_freq{ranges[i]}_{ranges[i+1]}_{low_res:.0e}_{cumulative}.nc'
+            ds.to_netcdf(name_out, mode = 'w')
 
     logger.info('Done')
         

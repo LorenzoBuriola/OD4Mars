@@ -12,7 +12,7 @@ from datetime import datetime
 from src.logger_setup import setup_logger
 from src.generate_profiles import generate_profiles
 from src.generate_p_levels import generate_p_levels
-from src.generate_mean_profile import generate_mean_profiles
+from src.generate_mean_profile import generate_mean_profiles, add_altitude, write_mean_cfg
 from src.generate_cfg4OD import generate_OD_cfg
 from src.generate_OD import generate_OD
 from src.OD import OD_calc
@@ -109,15 +109,21 @@ def main(args):
     logger.info(f"Pressure levels saved at '{config.get('pressure_levels_file', 'p_edges.npy')}'")
 
     # Step 3: Compute mean profile
+    csv_mean = config.get('mean_profile_file', 'mean_profile.csv')
     if flag_mean_profile:
-        mean_file = f'{cfg_path}{config.get('mean_profile_cfg_file', 'mean_profile.txt')}'
-        flag_altitude = config.get('mean_profile_compute_altitude', True)
         logger.info("Computing mean profile")
-        generate_mean_profiles(latitudes, longitudes, dates, f'{cfg_path}profiles/', p_filename,
-                                           csv_ofile = config.get('mean_profile_file', 'mean_profile.csv'),
-                                           cfg_ofile = mean_file, comp_alt = flag_altitude)
+        df_mean = generate_mean_profiles(latitudes, longitudes, dates, f'{cfg_path}profiles/', p_filename,
+                                           csv_ofile = csv_mean)
     else:
         logger.info("Skipping mean profile computation")
+        df_mean = pd.read_csv(csv_mean, header=[0,1])['Mean']
+    mean_file = f'{cfg_path}{config.get('mean_profile_cfg_file', 'mean_profile.txt')}'
+    flag_altitude = config.get('mean_profile_compute_altitude', True)
+    if flag_altitude:
+        add_altitude(df_mean)
+    else:
+        df_mean.drop(columns=['Altitude'], errors='ignore')
+    write_mean_cfg(df_prof=df_mean, ofile=mean_file)
     logger.info(f"Mean profile saved at '{cfg_path}{config.get('mean_profile_cfg_file', 'mean_profile.txt')}'")
 
     flag_od = config.get('od_compute', True)
@@ -156,7 +162,15 @@ def main(args):
 
     if flag_bin:
         # Step 6: Binning OD
-        OD_calc(gas_list, ranges_bin-0.005, temperatures, lyo_path, od_path, low_res)
+        cumulative = config.get('od_bin_cumulative', 'layer')
+        if cumulative not in ['top', 'bottom', 'layer']:
+            cumulative = 'layer'
+            logger.warning(f"Invalid cumulative value '{cumulative}' provided. Defaulting to 'layer'.")
+        if low_res <= 1e-4:
+            cumulative = 'layer'
+            logger.warning(f'OD fitted at the higher resolution, no binning is performed')
+        logger.info(f'Binning OD with cumulative method: {cumulative}')
+        OD_calc(gas_list, ranges_bin-0.005, temperatures, lyo_path, od_path, low_res, cumulative)
     logger.info(f'OD stored at {od_path}')
 
     if flag_fit:
@@ -164,7 +178,7 @@ def main(args):
         logger.info(f'Fitting with degree {degree} and low resolution {low_res:.0e} cm-1')
         OD_fit(gas_list, ranges_bin, 
                degree,
-               od_path, coeff_path, low_res)
+               od_path, coeff_path, low_res, cumulative)
     else:
         logger.info('Skipping OD fitting')
     logger.info(f'Fit stored at {coeff_path}')
@@ -179,9 +193,9 @@ def main(args):
                    ranges_bin,
                    degree,
                    coeff_path,
-                   outdir, low_res)
+                   outdir, low_res, cumulative)
         logger.info(f'run packoneband fortran executable')
-        run_packoneband('/home/buriola/OD4Mars/src/.', name_database,str(degree), outfile=config.get('pack_oneband_file', 'pack_oneband_output.txt'))
+        run_packoneband('/home/buriola/OD4Mars/src/.', name_database, str(degree), cumulative, outfile=config.get('pack_oneband_file', 'pack_oneband_output.txt'))
     else:
         logger.info("Skipping input for s4Mars preparation")
 
