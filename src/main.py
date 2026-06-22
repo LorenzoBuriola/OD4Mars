@@ -67,6 +67,8 @@ def main(args):
     od_path = data_path + 'od/'
     coeff_path = data_path + 'coeff/'
     sMars_path = data_path + 's4Mars/'
+    for path in [cfg_path, sMars_path]:
+        Path(path).mkdir(parents=True, exist_ok=True)
 
     flag_profile = config.get('profiles_compute', True)
     flag_p_levels = config.get('pressure_levels_compute', True)
@@ -133,6 +135,10 @@ def main(args):
 
     if (flag_od or flag_bin or flag_fit or flag_sMars):
         gas_list = config.get('gas_list', ["CO2", "CO", "H2O", "O3", "HCl", "HDO"])
+        for path in [lyo_path, od_path, coeff_path, lyr_path]:
+            for g_name in gas_list:
+                Path(f'{path}/{g_name}/').mkdir(parents=True, exist_ok=True)
+            Path(path).mkdir(parents=True, exist_ok=True)
         ranges = np.arange(config.get('ranges', [90, 3010, 40])[0],
                             config.get('ranges', [90, 3010, 40])[1]+config.get('ranges', [90, 3010, 40])[2],
                             config.get('ranges', [90, 3010, 40])[2])
