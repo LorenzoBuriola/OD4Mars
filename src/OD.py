@@ -1,6 +1,7 @@
 import logging
 import numpy as np
 import xarray as xr
+import pandas as pd
 from PSGpy.utils import read_out
 from scipy.stats import binned_statistic
 
@@ -60,25 +61,22 @@ def OD_calc(gas_list, ranges, temperatures, lyo_path, od_path, low_res, cumulati
     logger.info('All done!')
  
 def OD_compute(data, altitude=None):
+    arr = data.to_numpy(dtype='float64')
     if altitude is None:
         altitude = data.columns[1:].to_numpy(dtype='float64')
-    paths = np.diff(altitude).reshape(1,-1)
-    df_out = data.iloc[:,:-1].copy()
-    #check dimensions
-    if paths.shape[1] != df_out.shape[1]-1:
-        raise ValueError(f"Dimension mismatch: paths has shape {paths.shape}, but expected {(1, df_out.shape[1]-1)}")
-    df_out.iloc[:,1:] = data.iloc[:,1:-1]*paths
-    names = [f'level_{i+1}' for i in range(len(df_out.columns)-1)]
-    names.insert(0,'freq')
-    df_out.columns = names
-    return df_out
+    paths = np.diff(altitude)
+    out = arr[:,:-1].copy()
+    out[:,1:] *= paths
+    names = ['freq'] + [f'level_{i+1}' for i in range(out.shape[1]-1)]
+    return pd.DataFrame(data=out, columns=names)
     
 def OD_binning(high_res, n_bins, cumulative='layer'):
     #Sort values by frequency not to mess up the binning
-    high_res.sort_values(by='freq',inplace=True)
+    high_res.sort_values(by='freq',kind='mergesort')
     #Get the high frequency and optical depth values
-    f_high = high_res.freq.to_numpy()
-    ods = high_res.to_numpy()[:,1:].T
+    arr = high_res.to_numpy()
+    f_high = arr[:,0]
+    ods = arr[:,1:].T
     #Compute transmittance and cumulative transmittance
     trn = np.exp(-ods)
 
