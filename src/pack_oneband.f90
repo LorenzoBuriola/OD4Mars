@@ -87,7 +87,7 @@ program pack
     end if
 
     open(7,file='/home/buriola/OD4Mars/NO_BACKUP/data/s4Mars/'&
-        &   //trim(name_database)//trim(filenames(1)),status='unknown')
+        &   //trim(name_database)//'/'//trim(filenames(1)),status='unknown')
     write(7,'(I10)') nnquad
     do layer=1,nlayermax
         write(7,'(I6, (12I9))') npn(layer),(squad(is,layer),equad(is,layer),is=1,nspecies)
@@ -95,13 +95,13 @@ program pack
     close(7)
     if(nnquad.gt.0) then
         open(2,file='/home/buriola/OD4Mars/NO_BACKUP/data/s4Mars/'&
-            &   //trim(name_database)//trim(filenames(2)),form='unformatted',status='unknown')
+            &   //trim(name_database)//'/'//trim(filenames(2)),form='unformatted',status='unknown')
         write(2) (quad(iw),iw=1,nnquad)
         close(2)
         do ig=1,degree+1
             write(igstr,'(I0)') ig-1
             open(2,file='/home/buriola/OD4Mars/NO_BACKUP/data/s4Mars/'&
-                &//trim(name_database)//trim(filenames(ig+2)),form='unformatted',status='unknown')
+                &//trim(name_database)//'/'//trim(filenames(ig+2)),form='unformatted',status='unknown')
             write(2) (cq(iw,ig),iw=1,nnquad)
             close(2)
         enddo
