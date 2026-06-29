@@ -72,68 +72,60 @@ def OD_compute(data, altitude=None):
     
 def OD_binning(high_res, n_bins, cumulative='layer'):
     #Sort values by frequency not to mess up the binning
-    high_res.sort_values(by='freq',kind='mergesort')
+    high_res = high_res.sort_values(by='freq',kind='mergesort')
     #Get the high frequency and optical depth values
     arr = high_res.to_numpy()
     f_high = arr[:,0]
     ods = arr[:,1:].T
-    #Compute transmittance and cumulative transmittance
-    trn = np.exp(-ods)
-
-    if cumulative == 'top':
-        #Cumulative transmittance from the top of the atmosphere:
-        #need to reverse the order of the array to compute the cumulative product from the top 
-        #and reverse it back to the original order: index 0 corresponds to the lowest altitude)
-        cum_trn = np.cumprod(trn[::-1,:], axis=0)[::-1,:]
-        #Compute the mean of the cumulative transmittance and extract the edges of the bins
-        cum_binned,edges,_ = binned_statistic(x=f_high,values=cum_trn,statistic='mean',bins=n_bins)
-        #Compute the mean of the transmittance
-        binned,_,_ = binned_statistic(x=f_high,values=trn,statistic='mean',bins=n_bins)
-        #Compute the optical depth from the binned transmittance (the minus sign will be applied later)
-        #Mask to avoid division buy zero 
-        mask = cum_binned[1:] != 0
-        #Compute the transmittance from the binned cumulative transmittance
-        #and set the values to the optical depth array
-        np.divide(cum_binned[:-1], cum_binned[1:], out=binned[:-1], where=mask)
-
-    elif cumulative == 'bottom':
-        #Similiar to the 'top' case, but cumulative transmittance is computed from the bottom of the atmosphere
-        cum_trn = np.cumprod(trn, axis=0)
-        #Compute the mean of the cumulative transmittance and extract the edges of the bins
-        cum_binned,edges,_ = binned_statistic(x=f_high,values=cum_trn,statistic='mean',bins=n_bins)
-        #Compute the mean of the transmittance
-        binned,_,_ = binned_statistic(x=f_high,values=trn,statistic='mean',bins=n_bins)
-        #Compute the optical depth from the binned transmittance (the minus sign will be applied later)
-        #Mask to avoid division buy zero 
-        mask = cum_binned[:-1] != 0
-        #Compute the transmittance from the binned cumulative transmittance
-        #and set the values to the optical depth array
-        np.divide(cum_binned[1:], cum_binned[:-1], out=binned[1:], where=mask)
-
-    elif cumulative == 'layer':
+    if cumulative != 'od':
+        #Compute transmittance and cumulative transmittance
+        trn = np.exp(-ods)
         binned,edges,_ = binned_statistic(x=f_high,values=trn,statistic='mean',bins=n_bins)
+        mask = np.zeros_like(binned)
+        if cumulative in ['top', 'bottom']:
+            if cumulative == 'top':
+                #Cumulative transmittance from the top of the atmosphere:
+                #need to reverse the order of the array to compute the cumulative product from the top 
+                #and reverse it back to the original order: index 0 corresponds to the lowest altitude)
+                cum_trn = np.cumprod(trn[::-1,:], axis=0)[::-1,:]
+                #Compute the mean of the cumulative transmittance and extract the edges of the bins
+                cum_binned,_,_ = binned_statistic(x=f_high,values=cum_trn,statistic='mean',bins=n_bins)
+                #Compute the mean of the transmittance
+                #Compute the optical depth from the binned transmittance (the minus sign will be applied later)
+                #Mask to avoid division buy zero 
+                mask[1:] = cum_binned[1:] != 0
+                #Compute the transmittance from the binned cumulative transmittance
+                #and set the values to the optical depth array
+                num = cum_binned[:-1]
+                den = cum_binned[1:]
+                out = binned[:-1]
+            elif cumulative == 'bottom':
+                #Similiar to the 'top' case, but cumulative transmittance is computed from the bottom of the atmosphere
+                cum_trn = np.cumprod(trn, axis=0)
+                #Compute the mean of the cumulative transmittance and extract the edges of the bins
+                cum_binned,_,_ = binned_statistic(x=f_high,values=cum_trn,statistic='mean',bins=n_bins)
+                #Compute the mean of the transmittance
+                binned,_,_ = binned_statistic(x=f_high,values=trn,statistic='mean',bins=n_bins)
+                #Compute the optical depth from the binned transmittance (the minus sign will be applied later)
+                #Mask to avoid division buy zero 
+                mask[:-1] = cum_binned[:-1] != 0
+                #Compute the transmittance from the binned cumulative transmittance
+                #and set the values to the optical depth array
+                num = cum_binned[1:]
+                den = cum_binned[:-1]
+                out = binned[1:]
+            np.divide(num, den, out=out, where=mask)
+        #Clip the binned transmittance to avoid log of zero and compute the optical depth
+        binned = np.clip(binned, 1e-300, 1.0)
+        od_bin = -np.log(binned)
 
-    #Clip the binned transmittance to avoid log of zero and compute the optical depth
-    binned = np.clip(binned, 1e-300, 1.0)
-    od_bin = -np.log(binned)
-
-    new_row = np.ones((1, mask.shape[1]), dtype=bool)
-    mask = np.vstack((mask, new_row))
+    elif cumulative == 'od':
+        od_bin,edges,_ = binned_statistic(x=f_high,values=ods,statistic='mean',bins=n_bins)
+        mask = np.zeros_like(od_bin)
 
     low_freqs = np.round((edges[:-1] + edges[1:]) / 2, 4)
     return od_bin.T, mask.T, low_freqs
 
-
-"""    cum_binned,edges,_ = binned_statistic(x=f_high,values=cum_trn,statistic='mean',bins=n_bins)
-    binned,_,_ = binned_statistic(x=f_high,values=trn,statistic='mean',bins=n_bins)
-    
-    binned = np.clip(binned, 1e-300, 1.0)
-    od_bin = np.log(binned)
-
-    mask = (cum_binned[:-1] != 0) & (cum_binned[1:] != 0)
-    np.divide(cum_binned[:-1], cum_binned[1:], out=od_bin[:-1], where=mask)
-    np.log(od_bin[:-1], out=od_bin[:-1], where=mask)
-    od_bin = -od_bin"""
 """
     #Compute the error
     NN = np.sqrt(f_high.size/n_bins)

@@ -169,7 +169,7 @@ def main(args):
     if flag_bin:
         # Step 6: Binning OD
         cumulative = config.get('od_bin_cumulative', 'layer')
-        if cumulative not in ['top', 'bottom', 'layer']:
+        if cumulative not in ['top', 'bottom', 'layer', 'od']:
             cumulative = 'layer'
             logger.warning(f"Invalid cumulative value '{cumulative}' provided. Defaulting to 'layer'.")
         if low_res <= 1e-4:
