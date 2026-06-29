@@ -171,12 +171,6 @@ def main(args):
         logger.info("Skipping Optical Depth Generation")
     logger.info(f'OD at high resolution stored ar {lyo_path}')
 
-<<<<<<< Updated upstream
-    if flag_bin:
-        # Step 6: Binning OD
-        cumulative = config.get('od_bin_cumulative', 'layer')
-        if cumulative not in ['top', 'bottom', 'layer']:
-=======
     if (flag_bin or flag_fit or flag_s4Mars):
         ranges_bin_cfg = config['od-bin']['ranges']
         start, end, step = ranges_bin_cfg
@@ -185,7 +179,6 @@ def main(args):
         logger.info(f'low resolution: {low_res:.0e} cm-1')
         cumulative = config['od-bin']['cumulative']
         if cumulative not in ['top', 'bottom', 'layer', 'od', '']:
->>>>>>> Stashed changes
             cumulative = 'layer'
             logger.warning(f"Invalid cumulative value '{cumulative}' provided. Defaulting to 'layer'.")
         degree = config['od-fit']['degree']
