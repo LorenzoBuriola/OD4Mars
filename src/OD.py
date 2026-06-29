@@ -20,7 +20,7 @@ def OD_calc(gas_list, ranges, temperatures, lyo_path, od_path, low_res, cumulati
             for DT in temperatures:
                 logger.info(f'Temperature shift: {DT}')
                 try:
-                    tab = read_out(f'{lyo_path}{g_name}/lyo_{g_name}_{DT}_freq{ranges[i]:.0f}_{ranges[i+1]:.0f}.txt')
+                    tab = read_out(f'{lyo_path}{g_name}/lyo_{g_name}_{DT}_freq{ranges[i]:.0f}_{ranges[i+1]:.0f}_{1e-4:.0e}.txt')
                     tab = tab[:400000] # Limit to the first 400000 rows
                     tab = OD_compute(tab, altitude=hh)
                     if low_res <= 1e-4:

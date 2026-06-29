@@ -2,9 +2,10 @@
 # Lorenzo Buriola - University of Bologna, CNR-ISAC
 
 import argparse
-import json
+import tomllib
 import logging
 import sys
+import time
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -34,6 +35,12 @@ def parse_args():
     )
     return parser.parse_args()
 
+def load_config(path):
+    """Load configuration settings from a JSON file."""
+    with open(path, "rb") as file:
+        config = tomllib.load(file)
+    return config
+
 def main(args):
     # --- Load config file ---
     config = load_config(args.config)
@@ -59,42 +66,45 @@ def main(args):
     logger.info(f"Logging level set to: {args.log_level.upper()}")
 
     # important path
-    defaul_data_path = '/home/buriola/OD4Mars/NO_BACKUP/data/'
-    data_path = f"{config.get('data_path', defaul_data_path)}"
+    data_path = config['data_path']
     cfg_path = data_path + 'cfg/'
     lyr_path = data_path + 'lyr/'
     lyo_path = data_path + 'lyo/'
     od_path = data_path + 'od/'
     coeff_path = data_path + 'coeff/'
-    sMars_path = data_path + 's4Mars/'
-    for path in [cfg_path, sMars_path]:
+    s4Mars_path = data_path + 's4Mars/'
+    for path in [cfg_path, lyr_path, lyo_path, od_path, coeff_path, s4Mars_path]:
         Path(path).mkdir(parents=True, exist_ok=True)
 
-    flag_profile = config.get('profiles_compute', True)
-    flag_p_levels = config.get('pressure_levels_compute', True)
-    flag_mean_profile = config.get('mean_profile_compute', True)
+    flag_profile = config['profiles']['flag']
+    flag_p_levels = config['pressure_levels']['flag']
+    flag_mean_profile = config['mean_profile']['flag']
 
     if (flag_profile or flag_p_levels or flag_mean_profile):
         lat_step = 5.625    # from MCD
         long_step = 3.75    # from MCD
-        latitudes = np.arange(config.get('profile_latitudes', [-90, 90])[0],
-                                config.get('profile_latitudes', [-90, 90])[1]+lat_step, lat_step)
-        longitudes = np.arange(config.get('profile_longitudes', [0, 360])[0],
-                                 config.get('profile_longitudes', [0, 360])[1], long_step)
-        start_date = config.get('profile_dates', ['2019-03-23', '2021-02-07', 24])[0]
-        end_date = config.get('profile_dates', ['2019-03-23', '2021-02-07', 24])[1]
+        latitudes_cfg = config['profiles']['latitudes']
+        start, end = latitudes_cfg
+        latitudes = np.arange(start, end+lat_step/2, lat_step)
+        longitudes_cfg = config['profiles']['longitudes']
+        start, end = longitudes_cfg
+        longitudes = np.arange(start, end, long_step)
+        dates_cfg = config['profiles']['dates']
+        start, end, periods = dates_cfg
         dates = pd.date_range(
-            start=start_date,
-            end=end_date,
-            periods=config.get('profile_dates', ['2019-03-23', '2021-02-07', 24])[2],
+            start=start,
+            end=end,
+            periods=periods,
             unit='s'
         )
-        p_filename = config.get('pressure_levels_file', 'p_edges.npy')
+        p_filename = config['profiles']['path']
 
     # Step 1: Generate profiles
     if flag_profile:
         logger.info("Generating profiles")
-        generate_profiles(opath = f'{cfg_path}profiles/', dates = dates,
+        profile_path = cfg_path + 'profiles/'
+        Path(profile_path).mkdir(exist_ok=True)
+        generate_profiles(opath = profile_path, dates = dates,
                           latitudes = latitudes,
                           longitudes = longitudes)
     else:
@@ -104,77 +114,89 @@ def main(args):
     # Step 2: Compute pressure levels
     if flag_p_levels:
         logger.info("Computing pressure levels")
-        generate_p_levels(latitudes, longitudes, dates, f'{cfg_path}profiles/',
+        generate_p_levels(latitudes, longitudes, dates, f'profilepath',
                           ofile = p_filename)
     else:
         logger.info("Skipping pressure level computation")
-    logger.info(f"Pressure levels saved at '{config.get('pressure_levels_file', 'p_edges.npy')}'")
+    logger.info(f"Pressure levels saved at '{config['pressure_levels']['path']}'")
 
     # Step 3: Compute mean profile
-    csv_mean = config.get('mean_profile_file', 'mean_profile.csv')
+    csv_mean = config['mean_profile']['path_csv']
     if flag_mean_profile:
         logger.info("Computing mean profile")
-        df_mean = generate_mean_profiles(latitudes, longitudes, dates, f'{cfg_path}profiles/', p_filename,
-                                           csv_ofile = csv_mean)
+        df_mean = generate_mean_profiles(latitudes, longitudes, dates, f'{cfg_path}profiles/', p_filename, csv_ofile = csv_mean)
     else:
         logger.info("Skipping mean profile computation")
         df_mean = pd.read_csv(csv_mean, header=[0,1])['Mean']
-    mean_file = f'{cfg_path}{config.get('mean_profile_cfg_file', 'mean_profile.txt')}'
-    flag_altitude = config.get('mean_profile_compute_altitude', True)
+    mean_file = f"{cfg_path}{config['mean_profile']['path_cfg']}"
+    flag_altitude = config['mean_profile']['compute_altitude']
     if flag_altitude:
         add_altitude(df_mean)
     else:
-        df_mean.drop(columns=['Altitude'], errors='ignore')
+        df_mean = df_mean.drop(columns=['Altitude'], errors='ignore')
     write_mean_cfg(df_prof=df_mean, ofile=mean_file)
-    logger.info(f"Mean profile saved at '{cfg_path}{config.get('mean_profile_cfg_file', 'mean_profile.txt')}'")
+    logger.info(f"Mean profile saved at '{mean_file}'")
 
-    flag_od = config.get('od_compute', True)
-    flag_bin = config.get('od_bin', True)
-    flag_fit = config.get('od_fit', True)
-    flag_sMars = config.get('for_sMars', True)
+    flag_od = config['od-lyo']['flag']
+    flag_bin = config['od-bin']['flag']
+    flag_fit = config['od-fit']['flag']
+    flag_s4Mars = config['s4Mars']['flag']
+    gas_list = config['gas_list']
+    temperatures_cfg = config['temperatures']
+    start, end, step = temperatures_cfg
+    temperatures = np.arange(start, end+step/2, step)
 
-    if (flag_od or flag_bin or flag_fit or flag_sMars):
-        gas_list = config.get('gas_list', ["CO2", "CO", "H2O", "O3", "HCl", "HDO"])
-        for path in [lyo_path, od_path, coeff_path, lyr_path]:
-            for g_name in gas_list:
-                Path(f'{path}/{g_name}/').mkdir(parents=True, exist_ok=True)
-            Path(path).mkdir(parents=True, exist_ok=True)
-        ranges = np.arange(config.get('ranges', [90, 3010, 40])[0],
-                            config.get('ranges', [90, 3010, 40])[1]+config.get('ranges', [90, 3010, 40])[2],
-                            config.get('ranges', [90, 3010, 40])[2])
-        temperatures = np.arange(config.get('temperatures', [-60, 60, 10])[0],
-                            config.get('temperatures', [-60, 60, 10])[1]+config.get('temperatures', [-60, 60, 10])[2],
-                            config.get('temperatures', [-60, 60, 10])[2])
-        ranges_bin = ranges = np.arange(config.get('od_bin_ranges', [90, 3010, 40])[0],
-                            config.get('od_bin_ranges', [90, 3010, 40])[1]+config.get('od_bin_ranges', [90, 3010, 40])[2],
-                            config.get('od_bin_ranges', [90, 3010, 40])[2])
-        degree = config.get('fit_degree', 3)
-    
     if flag_od:
+        high_res = config['od-lyo']['high_res']
+        logger.info(f'high resolution: {high_res:.0e} cm-1')
+
+        ranges_cfg = config['od-lyo']['ranges']
+        start, end, step = ranges_cfg
+        ranges = np.arange(start, end+step/2, step)
+
         # Step 4: Generate cfg file for each species
         logger.info("Generating cfg files for OD computation")
-        
-        generate_OD_cfg(gas_list, cfg_path+'mean_profile.txt', f'{cfg_path}OD_gen/')
+        Path(f'{cfg_path}OD_gen/').mkdir(exist_ok=True)
+        t0 = time.time()
+        generate_OD_cfg(gas_list, mean_file, f'{cfg_path}OD_gen/')
+        logger.info(f"OD generation took {(time.time()-t0)/3600:.2f} h")
         logger.info(f"OD cfg files saved at '{cfg_path}OD_gen/'")
 
         # Step 5: Generate OD
+        for g_name in gas_list:
+            Path(f'{lyo_path}{g_name}/').mkdir(parents=True, exist_ok=True)
         logger.info("Generating Optical Depths")
-        generate_OD(gas_list, ranges-0.005, temperatures, cfg_path, lyo_path, lyr_path)
+        generate_OD(gas_list, ranges-0.005, high_res, temperatures, cfg_path, lyo_path, lyr_path)
     else:
         logger.info("Skipping Optical Depth Generation")
     logger.info(f'OD at high resolution stored ar {lyo_path}')
-    low_res = config.get('od_low_res', 1e-2)
-    logger.info(f'high resolution: 1e-4 cm-1, low resolution: {low_res:.0e} cm-1')
 
+<<<<<<< Updated upstream
     if flag_bin:
         # Step 6: Binning OD
         cumulative = config.get('od_bin_cumulative', 'layer')
         if cumulative not in ['top', 'bottom', 'layer']:
+=======
+    if (flag_bin or flag_fit or flag_s4Mars):
+        ranges_bin_cfg = config['od-bin']['ranges']
+        start, end, step = ranges_bin_cfg
+        ranges_bin = np.arange(start, end+step/2, step)
+        low_res = config['od-bin']['low_res']
+        logger.info(f'low resolution: {low_res:.0e} cm-1')
+        cumulative = config['od-bin']['cumulative']
+        if cumulative not in ['top', 'bottom', 'layer', 'od', '']:
+>>>>>>> Stashed changes
             cumulative = 'layer'
             logger.warning(f"Invalid cumulative value '{cumulative}' provided. Defaulting to 'layer'.")
+        degree = config['od-fit']['degree']
+    
+    if flag_bin:
+        # Step 6: Binning OD
         if low_res <= 1e-4:
-            cumulative = 'layer'
-            logger.warning(f'OD fitted at the higher resolution, no binning is performed')
+            cumulative = ''
+            logger.info('OD fitted at the higher resolution, no binning is performed')
+        else: 
+            logger.info(f'OD binning from 1e-4 to {low_res:.0e} cm-1')
         logger.info(f'Binning OD with cumulative method: {cumulative}')
         OD_calc(gas_list, ranges_bin-0.005, temperatures, lyo_path, od_path, low_res, cumulative)
     logger.info(f'OD stored at {od_path}')
@@ -189,11 +211,11 @@ def main(args):
         logger.info('Skipping OD fitting')
     logger.info(f'Fit stored at {coeff_path}')
 
-    if flag_sMars:
+    if flag_s4Mars:
         logger.info('Preparing input for s4Mars')
         logger.info(f'Using fit with degree {degree} and low resolution {low_res:.0e} cm-1')
-        name_database = config.get('name_od_database', 'PSG')
-        outdir = Path(sMars_path+name_database+'/to_pack/')
+        name_database = config['s4Mars']['name_od_database']
+        outdir = Path(s4Mars_path+name_database+'/to_pack/')
         outdir.mkdir(parents=True, exist_ok=True)
         input4pack(gas_list,
                    ranges_bin,
@@ -201,17 +223,11 @@ def main(args):
                    coeff_path,
                    outdir, low_res, cumulative)
         logger.info(f'run packoneband fortran executable')
-        run_packoneband('/home/buriola/OD4Mars/src/.', name_database, str(degree), cumulative, outfile=config.get('pack_oneband_file', 'pack_oneband_output.txt'))
+        run_packoneband('/home/buriola/OD4Mars/src/.', name_database, str(degree), cumulative, outfile=config['s4Mars']['pack_oneband_out'])
     else:
         logger.info("Skipping input for s4Mars preparation")
 
     logger.info('Program OD4Mars executed!')
-
-def load_config(path):
-    """Load configuration settings from a JSON file."""
-    with open(path, "r") as f:
-        config = json.load(f)
-    return config
 
 if __name__ == "__main__":
     args = parse_args()

@@ -39,12 +39,12 @@ def generate_profiles(opath, dates, latitudes, longitudes):
         for lat in latitudes:
             longs_to_use = [0] if abs(lat) == 90 else longitudes
             for long in longs_to_use:
-                logger.debug(f"Generating profile for date: {date}, lat: {lat}, long: {long}")
+                logger.info(f"Generating profile for date: {date}, lat: {lat}, long: {long}")
                 cfg_df['OBJECT-DATE'] = date
                 cfg_df['OBJECT-OBS-LATITUDE'] = str(lat)
                 cfg_df['OBJECT-OBS-LONGITUDE'] = str(long)
-                cfg.dict_to_cfg(cfg_dict=cfg_df, file_path='cfg_temp.txt')
-                run_psg(cfg_file='cfg_temp.txt', type='cfg', wephm = 'y', watm='y', wgeo='n',
-                    out_file=f"{opath}{name_file('cfg', date, lat, long)}.txt", verbose=False)
+                cfg.dict_to_cfg(cfg_dict=cfg_df, file_path='cfg_temp.cfg')
+                run_psg(cfg_file='cfg_temp.cfg', kind='cfg', wephm = 'y', watm='y',
+                    out_file=f"{opath}{name_file('cfg', date, lat, long)}.cfg", verbose=False)
     logger.info("Profile generation completed.")
 

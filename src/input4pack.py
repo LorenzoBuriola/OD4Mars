@@ -35,7 +35,7 @@ def input4pack(gas_list, ranges, degree, coeff_path, out_path, low_res, cumulati
         coeff_all = coeff_all.sortby('freq').sel(freq=slice(v1 - eps, v2 + eps))
         #check dimension
         if coeff_all.sizes['freq'] != nn:
-            logger.warning(f'ERROR, size mismatch, nn = {coeff_all.sizes['freq']}, expected = {nn}')
+            logger.warning(f"ERROR, size mismatch, nn = {coeff_all.sizes['freq']}, expected = {nn}")
         coeff_all = coeff_all.transpose('freq', 'altitude', 'degree')
         nquad = coeff_all.mask0.sum(dim = 'freq').values
 

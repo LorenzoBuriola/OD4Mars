@@ -2,7 +2,7 @@ import numpy as np
 import PSGpy.cfg as cfg
 import PSGpy.atm_obj as atm
 
-def generate_OD_cfg(gas_list, ifile, opath, res = 1e-4):
+def generate_OD_cfg(gas_list, ifile, opath):
     cfg_dict = cfg.read_cfg(ifile)
     for g_name in gas_list:
         temp = cfg_dict.copy()
@@ -17,5 +17,4 @@ def generate_OD_cfg(gas_list, ifile, opath, res = 1e-4):
             temp['ATMOSPHERE-ABUN'] = '1,1,1'
             temp['ATMOSPHERE-TYPE'] = 'HIT[1:1],HIT[1:2],HIT[1:3]'
             temp['ATMOSPHERE-NGAS'] = 3
-        temp['GENERATOR-RESOLUTION'] = res
         cfg.dict_to_cfg(cfg_dict=temp,file_path=f'{opath}cfg_{g_name}.txt')

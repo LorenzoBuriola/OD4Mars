@@ -1,0 +1,78 @@
+# Path of data files
+data_path = "/home/buriola/OD4Mars/NO_BACKUP/data/"
+# List of gases included in the optical depth computation
+gas_list = [ "CO2", "CO", "H2O", "O3", "HCl", "HDO" ]
+# Temperature grid for optical depth computation
+# (minimum, maximum, step)
+temperatures = [ -60, 60, 10]
+
+
+#Profiles
+[profiles]
+# Flag for the computation of sample profiles
+flag = true
+# Range of dates for sample profiles (first, last, number of dates)
+dates = [ "2019-03-23", "2021-02-07", 24 ]
+# Range of latitudes for sample profiles (minimum, maximum)
+latitudes = [ -90, 90 ]
+# Range of longitudes for sample profiles (minimum, maximum)
+longitudes = [ 0, 360 ]
+#Path
+path = "/home/buriola/OD4Mars/NO_BACKUP/data/cfg/profiles"
+
+#Pressure levels
+[pressure_levels]
+# Flag for the computation of fixed pressure levels
+flag = false
+# Path of the file containing pressure levels
+path = "/home/buriola/OD4Mars/output/p_edges.npy"
+
+#Mean profile
+[mean_profile]
+# Flag for the computation of the mean atmospheric profile
+flag = false
+# Compute the altitude from pressure level using scale height or let psg compute it independently?
+compute_altitude = true
+# Path of the output CSV file containing the mean profile
+path_csv = "/home/buriola/OD4Mars/output/mean_profile.csv"
+# Configuration file for the mean profile computation
+path_cfg = "mean_profile.cfg"
+
+#Optical Depth
+[od-lyo]
+# Flag for the computation of optical depths
+flag = false
+# Spectral range for optical depth computation
+# (start wavenumber, end wavenumber, number of points)
+ranges = [ 90, 3010, 40 ]
+# Spectral resolution of the high resolution optical depth database
+high_res = 1e-4
+
+#Binning
+[od-bin]
+# Store optical depths in binned form
+flag = false
+# Spectral range for optical depth binning
+# (start wavenumber, end wavenumber, number of points)
+ranges = [ 90, 3010, 40 ]
+# Spectral resolution of the low-resolution optical depth database
+low_res = 0.01
+# Method for cumulative optical depth bins
+# Allowed values: "bottom", "top", "layer", "od"
+cumulative = "layer"
+
+#Fit
+[od-fit]
+# Fit optical depth spectra with a polynomial
+flag = false
+# Degree of the polynomial fit
+degree = 3
+
+#for s4Mars
+[s4Mars]
+# Format the output database for use with s4Mars
+flag = false
+# Name of the generated packed optical depth database
+name_od_database = "PSG"
+# Output file containing the packed database
+pack_oneband_out = "/home/buriola/OD4Mars/output/pack_oneband_out.txt"
