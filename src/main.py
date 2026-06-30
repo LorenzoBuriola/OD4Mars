@@ -76,6 +76,9 @@ def main(args):
     for path in [cfg_path, lyr_path, lyo_path, od_path, coeff_path, s4Mars_path]:
         Path(path).mkdir(parents=True, exist_ok=True)
 
+    #output path
+    Path('/home/buriola/OD4Mars/output/').mkdir(exist_ok=True)
+
     flag_profile = config['profiles']['flag']
     flag_p_levels = config['pressure_levels']['flag']
     flag_mean_profile = config['mean_profile']['flag']
@@ -97,12 +100,12 @@ def main(args):
             periods=periods,
             unit='s'
         )
-        p_filename = config['profiles']['path']
+        profile_path = config['profiles']['path']
+        p_filename = config['pressure_levels']['path']
 
     # Step 1: Generate profiles
     if flag_profile:
         logger.info("Generating profiles")
-        profile_path = cfg_path + 'profiles/'
         Path(profile_path).mkdir(exist_ok=True)
         generate_profiles(opath = profile_path, dates = dates,
                           latitudes = latitudes,
@@ -114,20 +117,25 @@ def main(args):
     # Step 2: Compute pressure levels
     if flag_p_levels:
         logger.info("Computing pressure levels")
-        generate_p_levels(latitudes, longitudes, dates, f'profilepath',
+        generate_p_levels(latitudes, longitudes, dates, profile_path,
                           ofile = p_filename)
     else:
         logger.info("Skipping pressure level computation")
-    logger.info(f"Pressure levels saved at '{config['pressure_levels']['path']}'")
+    logger.info(f"Pressure levels saved at '{p_filename}'")
 
     # Step 3: Compute mean profile
     csv_mean = config['mean_profile']['path_csv']
     if flag_mean_profile:
         logger.info("Computing mean profile")
-        df_mean = generate_mean_profiles(latitudes, longitudes, dates, f'{cfg_path}profiles/', p_filename, csv_ofile = csv_mean)
+        df_mean = generate_mean_profiles(latitudes, longitudes, dates, profile_path, p_filename, csv_ofile = csv_mean)
     else:
         logger.info("Skipping mean profile computation")
-        df_mean = pd.read_csv(csv_mean, header=[0,1])['Mean']
+        try:
+            df_mean = pd.read_csv(csv_mean, header=[0,1])['Mean']
+        except FileNotFoundError:
+            logger.warning('Mean profile file not found, program will be exited')
+            sys.exit(1)
+
     mean_file = f"{cfg_path}{config['mean_profile']['path_cfg']}"
     flag_altitude = config['mean_profile']['compute_altitude']
     if flag_altitude:

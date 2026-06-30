@@ -10,7 +10,7 @@ temperatures = [ -60, 60, 10]
 #Profiles
 [profiles]
 # Flag for the computation of sample profiles
-flag = true
+flag = false
 # Range of dates for sample profiles (first, last, number of dates)
 dates = [ "2019-03-23", "2021-02-07", 24 ]
 # Range of latitudes for sample profiles (minimum, maximum)
@@ -18,7 +18,7 @@ latitudes = [ -90, 90 ]
 # Range of longitudes for sample profiles (minimum, maximum)
 longitudes = [ 0, 360 ]
 #Path
-path = "/home/buriola/OD4Mars/NO_BACKUP/data/cfg/profiles"
+path = "/home/buriola/OD4Mars/NO_BACKUP/data/cfg/profiles/"
 
 #Pressure levels
 [pressure_levels]
@@ -30,7 +30,7 @@ path = "/home/buriola/OD4Mars/output/p_edges.npy"
 #Mean profile
 [mean_profile]
 # Flag for the computation of the mean atmospheric profile
-flag = false
+flag = true
 # Compute the altitude from pressure level using scale height or let psg compute it independently?
 compute_altitude = true
 # Path of the output CSV file containing the mean profile
