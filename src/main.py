@@ -20,6 +20,7 @@ from src.OD import OD_calc
 from src.OD_fit import OD_fit
 from src.input4pack import input4pack, run_packoneband
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description="My pipeline")
     parser.add_argument(
@@ -114,14 +115,14 @@ def main(args):
         logger.info("Skipping profile generation")
     logger.info(f"Profiles at '{cfg_path}profiles/'")
 
-    # Step 2: Compute pressure levels
+    # Step 2: Compute pressure levels 
     if flag_p_levels:
         logger.info("Computing pressure levels")
         generate_p_levels(latitudes, longitudes, dates, profile_path,
                           ofile = p_filename)
     else:
         logger.info("Skipping pressure level computation")
-    logger.info(f"Pressure levels saved at '{p_filename}'")
+    logger.info(f"Pressure levels saved at '{config['pressure_levels']['path']}'")
 
     # Step 3: Compute mean profile
     csv_mean = config['mean_profile']['path_csv']
@@ -165,16 +166,17 @@ def main(args):
         # Step 4: Generate cfg file for each species
         logger.info("Generating cfg files for OD computation")
         Path(f'{cfg_path}OD_gen/').mkdir(exist_ok=True)
-        t0 = time.time()
         generate_OD_cfg(gas_list, mean_file, f'{cfg_path}OD_gen/')
-        logger.info(f"OD generation took {(time.time()-t0)/3600:.2f} h")
         logger.info(f"OD cfg files saved at '{cfg_path}OD_gen/'")
 
         # Step 5: Generate OD
         for g_name in gas_list:
             Path(f'{lyo_path}{g_name}/').mkdir(parents=True, exist_ok=True)
+            Path(f'{lyr_path}{g_name}/').mkdir(parents=True, exist_ok=True)
         logger.info("Generating Optical Depths")
+        t0 = time.time()
         generate_OD(gas_list, ranges-0.005, high_res, temperatures, cfg_path, lyo_path, lyr_path)
+        logger.info(f"OD generation took {(time.time()-t0)/3600:.2f} h")
     else:
         logger.info("Skipping Optical Depth Generation")
     logger.info(f'OD at high resolution stored ar {lyo_path}')
